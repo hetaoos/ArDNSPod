@@ -1,0 +1,88 @@
+#!/bin/sh
+
+#################################################
+# AnripDdns v5.08
+# Dynamic DNS using DNSPod API
+# Original by anrip<mail@anrip.com>, http://www.anrip.com/ddnspod
+# Edited by ProfFan
+#################################################
+
+# Global Variables:
+
+# Token-based Authentication
+#arToken="12345,7676f344eaeaea9074c123451234512d"
+arToken=""
+# Account-based Authentication
+arMail=""
+arPass=""
+
+
+arIpAddress() {
+    local extip
+    extip=$(nvram get wan0_ipaddr)
+    if [ "x${extip}" = "x" ]; then
+	    extip=$(ip -o -4 addr list | grep -Ev '\s(docker|lo|eth|global br)' | awk '{print $4}' | cut -d/ -f1)
+    fi
+    echo $extip
+}
+
+
+# Get data
+# arg: type data
+arApiPost() {
+    local agent="AnripDdns/5.07(mail@anrip.com)"
+    local inter="https://dnsapi.cn/${1:?'Info.Version'}"
+    if [ "x${arToken}" = "x" ]; then # undefine token
+        local param="login_email=${arMail}&login_password=${arPass}&format=json&${2}"
+    else
+        local param="login_token=${arToken}&format=json&${2}"
+    fi
+    wget --quiet --no-check-certificate --output-document=- --user-agent=$agent --post-data $param $inter
+}
+
+# Update
+# arg: main domain  sub domain
+arDdnsUpdate() {
+    local domainID recordID recordRS recordCD myIP
+    # Get domain ID
+    domainID=$(arApiPost "Domain.Info" "domain=${1}")
+    domainID=$(echo $domainID | sed 's/.*{"id":"\([0-9]*\)".*/\1/')
+    
+    # Get Record ID
+    recordID=$(arApiPost "Record.List" "domain_id=${domainID}&sub_domain=${2}")
+    recordID=$(echo $recordID | sed 's/.*\[{"id":"\([0-9]*\)".*/\1/')
+    
+    # Update IP
+    myIP=$(arIpAddress)
+    recordRS=$(arApiPost "Record.Ddns" "domain_id=${domainID}&record_id=${recordID}&sub_domain=${2}&record_type=A&value=${myIP}&record_line=默认")
+    recordCD=$(echo $recordRS | sed 's/.*{"code":"\([0-9]*\)".*/\1/')
+
+    # Output IP
+    if [ "$recordCD" = "1" ]; then
+        echo $recordRS | sed 's/.*,"value":"\([0-9\.]*\)".*/\1/'
+        return 1
+    fi
+    # Echo error message
+    echo $recordRS | sed 's/.*,"message":"\([^"]*\)".*/\1/'
+}
+
+# DDNS Check
+# Arg: Main Sub
+arDdnsCheck() {
+    local postRS
+    local hostIP=$(arIpAddress)
+    echo "hostIP: ${hostIP}"
+   
+    postRS=$(arDdnsUpdate $1 $2)
+    echo "postRS: ${postRS}"
+    if [ $? -ne 1 ]; then
+        return 0
+    fi
+    return 1
+}
+
+
+arDdnsCheck "test.org" "subdomain"
+
+/sbin/ddns_custom_updated 1
+

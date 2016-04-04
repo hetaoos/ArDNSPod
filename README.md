@@ -4,11 +4,11 @@
 
 # Usage
 
-复制`dns.conf.example`到同一目录下的`dns.conf`并根据你的配置修改即可。
+将 ddns-start 保存为 /jffs/scripts/ddns-start 并设置权限 755
 
-执行时直接运行`ddnspod.sh`，支持cron任务。
+执行时直接运行`ddns-start`，支持cron任务。
 
-配置文件格式：
+配置格式：
 ```
 # 安全起见，不推荐使用密码认证
 # arMail="test@gmail.com"
@@ -23,6 +23,8 @@ arDdnsCheck "test.org" "subdomain"
 ```
 
 # 最近更新
+2016/04/04
+- 适配梅林固件
 
 2015/2/24
 - 增加token鉴权方式 (by wbchn)
