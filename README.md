@@ -5,6 +5,7 @@
 # Usage
 
 将 ddns-start 保存为 /jffs/scripts/ddns-start 并设置权限 755
+在Web管理界面中：外部网络(WAN)/DDNS ，将 服务器 改为 "Custom"，并应用。
 
 执行时直接运行`ddns-start`，支持cron任务。
 
